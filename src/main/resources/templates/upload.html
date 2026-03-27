@@ -1,0 +1,182 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${pageTitle})}">
+    <title>Importer · Solr Search</title>
+</head>
+<body>
+<aside th:replace="~{layout :: sidebar}"></aside>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="ml-60 mt-14 flex-1">
+    <div class="container-main">
+        <div class="max-w-2xl pt-8">
+            <p class="text-xs font-mono text-brand-500 tracking-widest uppercase mb-3">Import de fichiers</p>
+            <h1 class="font-display text-3xl text-ink-900 mb-2">Importer des documents</h1>
+            <p class="text-sm text-ink-700/50 mb-10">Glissez-déposez vos fichiers ou cliquez pour parcourir. Indexation automatique par Solr.</p>
+
+            <div id="uploadArea" class="upload-area p-14 border-2 border-dashed border-ink-200 rounded-3xl transition-all cursor-pointer hover:border-brand-500 hover:bg-brand-50/30">
+                <div class="w-14 h-14 rounded-2xl bg-brand-100 text-brand-500 flex items-center justify-center mx-auto mb-5">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                    </svg>
+                </div>
+                <h2 class="font-semibold text-ink-900 mb-1 text-center">Zone de dépôt</h2>
+                <p class="text-sm text-ink-700/50 mb-6 text-center">PDF, TXT, DOC, DOCX supportés</p>
+                <div class="flex justify-center">
+                    <button type="button" class="btn-primary">Parcourir les fichiers</button>
+                </div>
+                <input type="file" id="fileInput" class="hidden" multiple />
+            </div>
+
+            <div class="mt-5 flex flex-wrap gap-2">
+                <span class="tag tag-brand">✓ Drag &amp; Drop</span>
+                <span class="tag tag-accent">✓ Indexation automatique</span>
+                <span class="tag tag-neutral">✓ Recherche instantanée</span>
+                <span class="tag" style="background:#d1fae5;color:#065f46">✓ Sécurisé</span>
+            </div>
+
+            <div class="progress-container mt-8 hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-medium text-ink-700/60">Progression</span>
+                    <span id="progressPercent" class="text-xs font-mono font-semibold text-brand-600">0%</span>
+                </div>
+                <div class="progress-bar bg-ink-100 h-2 rounded-full overflow-hidden">
+                    <div class="progress-fill bg-brand-500 h-full transition-all duration-300" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div id="statusMessage" class="mt-5 hidden p-4 rounded-xl text-sm font-medium"></div>
+
+            <div id="fileList" class="mt-8 space-y-3"></div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+
+<script>
+    const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const statusMsg = document.getElementById('statusMessage');
+    const progressWrap = document.querySelector('.progress-container');
+    const progressFill = document.querySelector('.progress-fill');
+    const progressText = document.getElementById('progressPercent');
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', () => {
+        handleUpload(fileInput.files);
+    });
+
+    uploadArea.addEventListener('dragover', e => {
+        e.preventDefault();
+        uploadArea.classList.add('border-brand-500', 'bg-brand-50');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('border-brand-500', 'bg-brand-50');
+    });
+    
+    uploadArea.addEventListener('drop', e => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-brand-500', 'bg-brand-50');
+        handleUpload(e.dataTransfer.files);
+    });
+
+    async function handleUpload(files) {
+        if (files.length === 0) return;
+
+        fileList.innerHTML = '';
+        statusMsg.classList.add('hidden');
+        progressWrap.classList.remove('hidden');
+        updateProgress(0);
+
+        let uploadedCount = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                showStatus(`✗ "${file.name}" depasse 50MB.`, 'bg-red-50 text-red-700');
+                return;
+            }
+            
+            addFileToUI(file);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/files', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    let errorMessage = `Upload failed (HTTP ${response.status})`;
+
+                    try {
+                        const errorJson = await response.json();
+                        if (errorJson && errorJson.message) {
+                            errorMessage = errorJson.message;
+                        }
+                    } catch (parseError) {
+                        if (response.status === 413) {
+                            errorMessage = 'Fichier trop volumineux. Taille maximale: 50MB.';
+                        }
+                    }
+
+                    throw new Error(errorMessage);
+                }
+
+                uploadedCount++;
+                const percent = Math.round((uploadedCount / files.length) * 100);
+                updateProgress(percent);
+
+            } catch (err) {
+                console.error(err);
+                showStatus(`✗ Erreur lors de l'import de "${file.name}": ${err.message}`, 'bg-red-50 text-red-700');
+                return; 
+            }
+        }
+
+        showStatus(`✓ ${uploadedCount} fichier(s) importé(s) avec succès !`, 'bg-emerald-50 text-emerald-700');
+    }
+
+    function addFileToUI(file) {
+        const item = document.createElement('div');
+        item.className = 'flex items-center gap-4 p-3 bg-white border border-ink-100 rounded-xl shadow-sm';
+        item.innerHTML = `
+            <div class="w-10 h-10 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-ink-900 text-sm truncate">${file.name}</p>
+                <p class="text-xs text-ink-700/40 font-mono">${(file.size / 1024).toFixed(1)} KB</p>
+            </div>
+            <div class="text-emerald-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+            </div>
+        `;
+        fileList.appendChild(item);
+    }
+
+    function updateProgress(pct) {
+        progressFill.style.width = pct + '%';
+        progressText.textContent = pct + '%';
+    }
+
+    function showStatus(text, classes) {
+        statusMsg.className = `mt-5 p-4 rounded-xl text-sm font-medium ${classes}`;
+        statusMsg.textContent = text;
+        statusMsg.classList.remove('hidden');
+    }
+</script>
+</body>
+</html>

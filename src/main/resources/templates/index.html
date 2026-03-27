@@ -1,0 +1,73 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${pageTitle})}">
+    <title>Accueil · Solr Search</title>
+</head>
+<body>
+<aside th:replace="~{layout :: sidebar}"></aside>
+<nav   th:replace="~{layout :: navbar}"></nav>
+
+<main class="ml-60 mt-14 flex-1">
+<div class="container-main">
+
+    <div class="divider"></div>
+
+    <section class="py-12">
+        <h2 class="font-display text-2xl text-ink-900 mb-8">Tableau de bord</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+            <div class="card bg-gradient-to-br from-brand-50 to-brand-100/50 border border-brand-200">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-mono text-brand-600 uppercase tracking-widest mb-2">Documents indexés</p>
+                        <p class="text-4xl font-bold text-brand-900" th:text="${stats.totalDocuments != null ? stats.totalDocuments : '0'}">
+                            0
+                        </p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-brand-200/50 text-brand-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-gradient-to-br from-accent-50 to-accent-100/50 border border-accent-200">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-mono text-accent-600 uppercase tracking-widest mb-2">Fichiers stockés</p>
+                        <p class="text-4xl font-bold text-accent-900" th:text="${stats.totalFiles != null ? stats.totalFiles : '0'}">
+                            0
+                        </p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-accent-200/50 text-accent-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-mono text-emerald-600 uppercase tracking-widest mb-2">Espace utilisé</p>
+                        <p class="text-4xl font-bold text-emerald-900" th:text="${stats.totalSize != null ? stats.totalSize : '0 B'}">
+                            0 B
+                        </p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-emerald-200/50 text-emerald-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10a2 2 0 002 2h12a2 2 0 002-2V7m0 0V5a2 2 0 00-2-2H6a2 2 0 00-2 2v2m0 0h16"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

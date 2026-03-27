@@ -1,0 +1,114 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(pageTitle)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} + ' · ' + (appName != null ? appName : 'Solr Search')">Solr Search</title>
+    <link rel="stylesheet" th:href="@{/css/tailwind.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+
+<body class="bg-ink-50 min-h-screen flex">
+
+    <aside th:fragment="sidebar" class="sidebar">
+
+        <div class="px-5 py-6 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shadow-glow-sm flex-shrink-0">
+                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-white font-semibold text-sm leading-none">Solr</p>
+                    <p class="text-white/30 text-xs mt-0.5 font-mono tracking-wider">SEARCH ENGINE</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 px-3 py-5 space-y-1">
+            <p class="px-4 text-white/25 text-xs font-mono tracking-widest uppercase mb-3">Navigation</p>
+
+            <a href="/" class="sidebar-link" data-page="home">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span>Accueil</span>
+            </a>
+
+            <a href="/search" class="sidebar-link" data-page="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span>Recherche</span>
+            </a>
+
+            <a href="/upload" class="sidebar-link" data-page="upload">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>Importer</span>
+            </a>
+        </nav>
+
+        <div class="px-4 py-5 border-t border-white/5">
+            <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                <p class="text-white/40 text-xs leading-relaxed">
+                    Utilisez des mots-clés précis pour de meilleurs résultats.
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    <nav th:fragment="navbar" class="navbar">
+        <div class="h-full px-8 flex items-center justify-between">
+            <div>
+                <h2 id="navPageTitle" class="text-sm font-semibold text-ink-900">—</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="w-8 h-8 rounded-lg flex items-center justify-center text-ink-700/50 hover:text-brand-600 hover:bg-brand-50 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                </button>
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shadow-glow-sm cursor-pointer">
+                    <span class="text-white text-xs font-semibold">AB</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 ml-60 mt-14 min-h-screen">
+        <div th:fragment="content-wrapper" class="w-full"></div>
+    </main>
+
+    <footer th:fragment="footer" class="ml-60 border-t border-ink-200 py-5 px-8 text-center">
+        <p class="text-xs text-ink-700/40 font-mono">
+            © 2024 Solr File Search Engine
+            <span class="mx-2 text-ink-200">·</span>
+            Moteur <span class="text-brand-500">moderne</span> &amp; <span class="text-accent-500">minimaliste</span>
+        </p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const path = window.location.pathname;
+            const links = document.querySelectorAll('.sidebar-link');
+            const titles = { '/': 'Accueil', '/search': 'Recherche', '/upload': 'Importer' };
+
+            links.forEach(link => {
+                link.classList.remove('active');
+                const page = link.getAttribute('data-page');
+                const href = link.getAttribute('href');
+                if (href === path || (path === '/' && page === 'home')) {
+                    link.classList.add('active');
+                }
+            });
+
+            const titleEl = document.getElementById('navPageTitle');
+            if (titleEl) titleEl.textContent = titles[path] || 'Solr Search';
+        });
+    </script>
+
+</body>
+</html>

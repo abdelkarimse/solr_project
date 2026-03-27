@@ -1,0 +1,68 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Erreur')}">
+    <title>Erreur · Solr Search</title>
+</head>
+<body>
+<aside th:replace="~{layout :: sidebar}"></aside>
+<nav   th:replace="~{layout :: navbar}"></nav>
+
+<main class="ml-60 mt-14 flex-1">
+<div class="container-main">
+
+    <div class="max-w-xl pt-16">
+
+        <div class="w-14 h-14 rounded-2xl bg-red-50 text-red-400 flex items-center justify-center mb-8">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+        </div>
+
+        <p class="text-xs font-mono text-red-400 tracking-widest uppercase mb-3">Une erreur est survenue</p>
+        <h1 class="font-display text-3xl text-ink-900 mb-2" th:text="${errorTitle}">Erreur inattendue</h1>
+
+        <div class="mt-6 bg-red-50 border border-red-100 rounded-2xl p-5">
+            <p class="text-xs font-mono text-red-400 uppercase tracking-widest mb-2">Détail</p>
+            <p class="text-sm text-red-700 font-mono leading-relaxed break-words" th:text="${errorMessage}">
+                An unexpected error occurred.
+            </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 flex flex-wrap gap-3">
+            <a href="/"       class="btn-primary">Retour à l'accueil</a>
+            <a href="/upload" class="btn-secondary">Importer un fichier</a>
+            <a href="/search" class="btn-secondary">Rechercher</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Help -->
+        <div>
+            <p class="text-xs font-mono text-ink-700/40 uppercase tracking-widest mb-4">Que faire ?</p>
+            <ul class="space-y-2.5 text-sm text-ink-700/60">
+                <li class="flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                    Vérifiez le message d'erreur ci-dessus pour plus de détails.
+                </li>
+                <li class="flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                    Assurez-vous que le serveur Solr est actif (port 8983).
+                </li>
+                <li class="flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                    Vérifiez que le format de fichier est supporté.
+                </li>
+                <li class="flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                    Contactez le support si le problème persiste.
+                </li>
+            </ul>
+        </div>
+
+    </div>
+</div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

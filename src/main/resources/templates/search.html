@@ -1,0 +1,538 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${pageTitle})}">
+    <title>Recherche · Solr Search</title>
+</head>
+<body th:data-streaming="${streaming}">
+<aside th:replace="~{layout :: sidebar}"></aside>
+<nav   th:replace="~{layout :: navbar}"></nav>
+
+<main class="ml-60 mt-14 flex-1">
+<div class="container-main">
+
+    <div class="pt-8 pb-10">
+        <p class="text-xs font-mono text-brand-500 tracking-widest uppercase mb-3">Recherche plein-texte</p>
+        <h1 class="font-display text-3xl text-ink-900 mb-8">Explorez vos documents</h1>
+
+        <div class="max-w-4xl space-y-4">
+            <form method="get" action="/search" class="space-y-4">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        name="q"
+                        placeholder="Rechercher dans Solr…"
+                        th:value="${query}"
+                        class="search-input pl-11 pr-32 w-full"
+                        autofocus
+                    />
+                    <button type="submit"
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 btn-primary py-2 text-xs">
+                        Rechercher
+                    </button>
+                </div>
+            </form>
+
+            <details class="bg-ink-50 rounded-lg p-4">
+                <summary class="cursor-pointer font-semibold text-sm text-ink-900">Options de recherche avancée</summary>
+                <form method="get" action="/search" class="mt-4 space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-ink-700 mb-1">Titre</label>
+                            <input type="text" name="title" placeholder="Chercher par titre" class="input-field" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-ink-700 mb-1">Auteur</label>
+                            <input type="text" name="author" placeholder="Chercher par auteur" class="input-field" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-ink-700 mb-1">Type de fichier</label>
+                            <select name="filetype" class="input-field">
+                                <option value="">Tous les types</option>
+                                <option value="application/pdf">PDF</option>
+                                <option value="application/msword">Word</option>
+                                <option value="application/vnd.ms-excel">Excel</option>
+                                <option value="text/plain">Texte</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <input type="text" name="q" th:value="${query}" placeholder="Terme général" class="input-field w-full" />
+                    </div>
+                    <button type="submit" class="btn-primary text-sm">Appliquer les filtres</button>
+                </form>
+            </details>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div th:if="${facets != null and facets.size() > 0}" class="lg:col-span-1">
+            <div class="sticky top-20 space-y-4">
+                <h3 class="font-semibold text-sm text-ink-900 mb-4">Filtres</h3>
+                
+                <div th:each="facetEntry : ${facets.entrySet()}">
+                    <details class="group" open>
+                        <summary class="cursor-pointer font-medium text-sm text-ink-900 mb-2 group-open:text-brand-600">
+                            <span th:text="${facetEntry.key}">Type</span>
+                        </summary>
+                        <ul class="space-y-2 ml-2">
+                            <li th:each="facetValue : ${facetEntry.value}">
+                                <a th:href="${'?q=' + query + '&filetype=' + facetValue.value}" 
+                                   class="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-2">
+                                    <span class="inline-block w-4 h-4 rounded border border-brand-300"></span>
+                                    <span th:text="${facetValue.value}">Valeur</span>
+                                    <span class="text-ink-500" th:text="${'(' + facetValue.count + ')'}"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <div th:classappend="${facets != null and facets.size() > 0 ? 'lg:col-span-3' : 'lg:col-span-4'}" class="lg:col-span-4">
+            <!-- Streaming Results Container -->
+            <div id="results-container" th:if="${streaming}" class="space-y-4">
+                <div class="flex items-center justify-between mb-6">
+                    <p class="text-xs font-mono text-ink-700/50">
+                        <span id="result-count" class="text-brand-600 font-semibold">0</span>
+                        <span id="result-text"> résultats</span>
+                    </p>
+                    <p id="search-status" class="text-xs text-brand-600 flex items-center gap-1">
+                        <span class="inline-block w-2 h-2 rounded-full bg-brand-600 animate-pulse"></span>
+                        Recherche en cours...
+                    </p>
+                </div>
+
+                <!-- Summary Container (Streaming) -->
+                <div id="summary-display" class="bg-gradient-to-r from-brand-50 to-accent-50 border border-brand-200 rounded-lg p-5 mb-6">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-brand-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 7a1 1 0 000 2h6a1 1 0 000-2H8zm0 3a1 1 0 000 2h3a1 1 0 000-2H8z" clip-rule="evenodd" />
+                        </svg>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-sm text-ink-900 mb-2">Vue d'ensemble</h3>
+                            <div id="summary-content" class="text-sm text-ink-700 leading-relaxed">
+                                <div class="skeleton-loader">
+                                    <div class="h-4 bg-brand-200 rounded w-full mb-2"></div>
+                                    <div class="h-4 bg-brand-200 rounded w-5/6"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results List (Streaming) -->
+                <div id="results-list" class="space-y-4">
+                    <!-- Results will be inserted here by JavaScript -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden py-24 text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-ink-200 flex items-center justify-center mx-auto mb-5">
+                        <svg class="w-7 h-7 text-ink-700/40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                    </div>
+                    <h2 class="font-display text-xl text-ink-900 mb-2">Aucun résultat trouvé</h2>
+                    <p class="text-sm text-ink-700/50 mb-6">
+                        Essayez une autre recherche ou
+                        <a href="/upload" class="text-brand-600 hover:text-brand-700 font-medium underline underline-offset-2">importez des documents</a>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Server-side Rendered Results (fallback) -->
+            <div th:if="${!streaming and results != null and results.size() > 0}">
+                <div class="flex items-center justify-between mb-6">
+                    <p class="text-xs font-mono text-ink-700/50">
+                        <span class="text-brand-600 font-semibold" th:text="${results.size()}">0</span>
+                        <span th:text="${results.size() == 1 ? ' résultat' : ' résultats'}"> résultats</span>
+                    </p>
+                </div>
+
+                <div id="combined-summary-container" class="bg-gradient-to-r from-brand-50 to-accent-50 border border-brand-200 rounded-lg p-5 mb-6">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-brand-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 7a1 1 0 000 2h6a1 1 0 000-2H8zm0 3a1 1 0 000 2h3a1 1 0 000-2H8z" clip-rule="evenodd" />
+                        </svg>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-sm text-ink-900 mb-2">Vue d'ensemble</h3>
+                            <div id="summary-content" class="text-sm text-ink-700 leading-relaxed">
+                                <div class="skeleton-loader">
+                                    <div class="h-4 bg-brand-200 rounded w-full mb-2"></div>
+                                    <div class="h-4 bg-brand-200 rounded w-5/6"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <article th:each="result : ${results}"
+                             class="card hover:border-brand-200 cursor-pointer transition-all">
+
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1">
+                                <h3 class="card-link font-semibold" th:text="${result.title != null and !#strings.isEmpty(result.title) ? result.title : result.name}">
+                                    Titre du résultat
+                                </h3>
+                                <p th:if="${result.author != null and !#strings.isEmpty(result.author)}" class="text-xs text-ink-700/60 mb-2">
+                                    Par <span th:text="${result.author}"></span>
+                                </p>
+                            </div>
+                            <div class="flex-shrink-0 bg-brand-100 text-brand-700 font-bold text-sm px-3 py-1 rounded-lg"
+                                 th:title="'Score de pertinence'">
+                                <span th:text="${result.score != null ? #numbers.formatDecimal(result.score, 1, 2) : '0.00'}">
+                                    0.00
+                                </span>
+                            </div>
+                        </div>
+
+                        <p class="card-text line-clamp-2 mt-2 text-sm" th:text="${result.content}">
+                            Aperçu du contenu du fichier…
+                        </p>
+
+                        <div class="mt-4 flex items-center gap-2 flex-wrap">
+                            <span class="tag tag-brand" th:text="${result.fileType}" th:if="${result.fileType != null and !#strings.isEmpty(result.fileType)}">Type</span>
+                            <span class="tag tag-neutral" th:text="${#numbers.formatInteger(result.size / 1024, 0)} + ' KB'" th:if="${result.size != null}">
+                                Taille
+                            </span>
+                            <span class="tag tag-accent" th:if="${result.uploadDate != null}">
+                                <span th:text="${#dates.format(result.uploadDate, 'dd MMM yyyy')}">Date</span>
+                            </span>
+                        </div>
+
+                        <div class="card-meta border-t pt-2 mt-3">
+                            <span class="text-xs" th:text="${result.name}">nom_du_fichier.pdf</span>
+                        </div>
+
+                    </article>
+                </div>
+            </div>
+
+            <div th:if="${(!streaming) and (results == null or results.size() == 0)}" class="py-24 text-center">
+                <div class="w-16 h-16 rounded-2xl bg-ink-200 flex items-center justify-center mx-auto mb-5">
+                    <svg class="w-7 h-7 text-ink-700/40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </div>
+                <h2 class="font-display text-xl text-ink-900 mb-2">
+                    <span th:text="${query != null and !#strings.isEmpty(query) ? 'Aucun résultat pour : ' + query : 'Aucun résultat'}">
+                        Aucun résultat
+                    </span>
+                </h2>
+                <p class="text-sm text-ink-700/50 mb-6">
+                    Essayez une autre recherche ou
+                    <a href="/upload" class="text-brand-600 hover:text-brand-700 font-medium underline underline-offset-2">importez des documents</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+
+<style>
+    .input-field {
+        @apply w-full px-3 py-2 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500;
+    }
+    
+    .skeleton-loader {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .typing-effect {
+        position: relative;
+    }
+    
+    .cursor {
+        display: inline-block;
+        margin-left: 2px;
+        animation: blink 0.7s infinite;
+        color: #3b82f6;
+        font-weight: bold;
+    }
+    
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const params = new URLSearchParams(window.location.search);
+        const query = params.get('q');
+        const streaming = document.querySelector('body').dataset.streaming === 'true';
+        
+        if (!query || !streaming) return;
+        
+        // Get streaming containers
+        const summaryContent = document.getElementById('summary-content');
+        const resultsList = document.getElementById('results-list');
+        const resultCount = document.getElementById('result-count');
+        const searchStatus = document.getElementById('search-status');
+        const emptyState = document.getElementById('empty-state');
+        
+        const params_query = {
+            q: query,
+            title: params.get('title') || '',
+            author: params.get('author') || '',
+            filetype: params.get('filetype') || '',
+            limit: params.get('limit') || '20'
+        };
+        
+        const queryString = new URLSearchParams(params_query).toString();
+        const eventSource = new EventSource(`/api/search-summary-stream?${queryString}`);
+        
+        let summaryText = '';
+        let wordBuffer = [];
+        let isComplete = false;
+        let resultCount_num = 0;
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function updateSummaryDisplay(html) {
+            if (summaryContent) {
+                summaryContent.innerHTML = html;
+            }
+        }
+        
+        function updateStatus(message, status = 'searching') {
+            if (searchStatus) {
+                searchStatus.innerHTML = `
+                    <span class="inline-block w-2 h-2 rounded-full bg-brand-600 animate-pulse"></span>
+                    ${message}
+                `;
+            }
+        }
+        
+        function addResultToList(result) {
+            if (!resultsList) return;
+            
+            resultCount_num++;
+            if (resultCount) {
+                resultCount.textContent = resultCount_num;
+            }
+            
+            const resultElement = document.createElement('article');
+            resultElement.className = 'card hover:border-brand-200 cursor-pointer transition-all animate-fadeIn';
+            
+            const title = escapeHtml(result.title || result.name || 'Sans titre');
+            const author = result.author ? escapeHtml(result.author) : '';
+            const content = escapeHtml((result.content || '').substring(0, 200));
+            const fileType = escapeHtml(result.fileType || '');
+            const sizeKB = Math.round((result.size || 0) / 1024);
+            const score = (result.score || 0).toFixed(2);
+            const date = result.uploadDate ? new Date(result.uploadDate).toLocaleDateString('fr-FR') : '';
+            const name = escapeHtml(result.name || '');
+            
+            resultElement.innerHTML = `
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1">
+                        <h3 class="card-link font-semibold">${title}</h3>
+                        ${author ? `<p class="text-xs text-ink-700/60 mb-2">Par ${author}</p>` : ''}
+                    </div>
+                    <div class="flex-shrink-0 bg-brand-100 text-brand-700 font-bold text-sm px-3 py-1 rounded-lg" title="Score de pertinence">
+                        ${score}
+                    </div>
+                </div>
+                <p class="card-text line-clamp-2 mt-2 text-sm">${content}</p>
+                <div class="mt-4 flex items-center gap-2 flex-wrap">
+                    ${fileType ? `<span class="tag tag-brand">${fileType}</span>` : ''}
+                    ${sizeKB > 0 ? `<span class="tag tag-neutral">${sizeKB} KB</span>` : ''}
+                    ${date ? `<span class="tag tag-accent">${date}</span>` : ''}
+                </div>
+                <div class="card-meta border-t pt-2 mt-3">
+                    <span class="text-xs">${name}</span>
+                </div>
+            `;
+            
+            resultsList.appendChild(resultElement);
+        }
+        
+        updateStatus('Recherche en cours...');
+        updateSummaryDisplay(`
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded-full bg-brand-500 animate-pulse"></div>
+                <p class="text-sm text-ink-700">Démarrage de la recherche...</p>
+            </div>
+        `);
+        
+        eventSource.addEventListener('start', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('Search started:', data);
+                updateStatus('Recherche en cours...');
+            } catch (e) {
+                console.error('Error parsing start event:', e);
+            }
+        });
+        
+        eventSource.addEventListener('result', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('Result received:', data);
+                addResultToList(data);
+                updateStatus('Traitement des résultats...');
+            } catch (e) {
+                console.error('Error parsing result event:', e);
+            }
+        });
+        
+        // Handle progress updates
+        eventSource.addEventListener('progress', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('Progress:', data);
+                updateStatus(data.message);
+            } catch (e) {
+                console.error('Error parsing progress event:', e);
+            }
+        });
+        
+        eventSource.addEventListener('word', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                wordBuffer.push(data.word);
+                summaryText = wordBuffer.join(' ');
+                
+                updateSummaryDisplay(`
+                    <p class="text-sm text-ink-700 leading-relaxed typing-effect">
+                        ${escapeHtml(summaryText)}<span class="cursor">▌</span>
+                    </p>
+                `);
+            } catch (e) {
+                console.error('Error parsing word event:', e);
+            }
+        });
+        
+        eventSource.addEventListener('complete', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                isComplete = true;
+                console.log('Search complete:', data);
+                
+                if (searchStatus) {
+                    searchStatus.innerHTML = `
+                        <span class="text-ink-600">✓ Recherche terminée</span>
+                    `;
+                }
+                
+                updateSummaryDisplay(`
+                    <p class="text-sm text-ink-700 leading-relaxed">
+                        ${escapeHtml(summaryText)}
+                    </p>
+                    <p class="text-xs text-ink-500 mt-3 flex items-center gap-1">
+                        <span class="text-brand-600">✓</span> 
+                        Résumé complet (${data.totalWords} mots)
+                    </p>
+                `);
+                
+                if (resultCount_num === 0) {
+                    if (emptyState) emptyState.classList.remove('hidden');
+                    if (resultsList) resultsList.innerHTML = '';
+                }
+                
+                eventSource.close();
+            } catch (e) {
+                console.error('Error parsing complete event:', e);
+                eventSource.close();
+            }
+        });
+        
+        eventSource.addEventListener('error', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.error('API Error:', data);
+                
+                let errorHtml = `
+                    <div class="bg-red-50 border border-red-200 rounded p-3">
+                        <p class="text-sm font-medium text-red-900 mb-1">${escapeHtml(data.error || 'Erreur')}</p>
+                        <p class="text-xs text-red-700">${escapeHtml(data.message || 'Une erreur est survenue')}</p>
+                `;
+                
+                if (data.type) {
+                    errorHtml += `<p class="text-xs text-red-600 mt-2">Type: ${escapeHtml(data.type)}</p>`;
+                }
+                
+                if (summaryText.trim()) {
+                    errorHtml += `
+                        <p class="text-xs text-red-600 mt-2 italic">Résumé partiel:</p>
+                        <p class="text-xs text-red-700 mt-1">${escapeHtml(summaryText)}</p>
+                    `;
+                }
+                
+                errorHtml += `</div>`;
+                updateSummaryDisplay(errorHtml);
+                
+                if (searchStatus) {
+                    searchStatus.innerHTML = `<span class="text-red-600">✗ Erreur lors de la recherche</span>`;
+                }
+                
+                eventSource.close();
+            } catch (e) {
+                console.error('Error parsing error event:', e);
+                eventSource.close();
+            }
+        });
+        
+        eventSource.onerror = (error) => {
+            if (!isComplete) {
+                console.error('EventSource connection error:', error);
+                updateSummaryDisplay(`
+                    <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
+                        <p class="text-sm font-medium text-yellow-900 mb-1">Connexion perdue</p>
+                        <p class="text-xs text-yellow-700">Impossible de maintenir la connexion en continu.</p>
+                    </div>
+                `);
+                
+                if (searchStatus) {
+                    searchStatus.innerHTML = `<span class="text-yellow-600">⚠ Connexion perdue</span>`;
+                }
+            }
+            eventSource.close();
+        };
+    });
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+</script>
+
+<style>
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-fadeIn {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+</style>
+</body>
+</html>
