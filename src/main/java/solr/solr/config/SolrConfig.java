@@ -11,20 +11,16 @@ import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class SolrConfig {
-
     @Value("${solr.host}")
     private String solrHost;
-
     @Bean
     public SolrClient solrClient() {
         return new Http2SolrClient.Builder(solrHost).build();
     }
-
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
-
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();

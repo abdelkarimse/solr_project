@@ -32,6 +32,10 @@ public class SolrRepository implements ISolrRepository {
     private String solrHost;
 
     private static final String CORE_NAME = "Projects_Solr";
+    
+    private static final int FACET_LIMIT = 20;
+    private static final int FACET_MIN_COUNT = 1;
+    private static final String[] DEFAULT_FACET_FIELDS = {"author", "filetype", "created_date"};
 
     public void indexDocument(FileDocument fileDocument) throws SolrServerException, IOException {
         SolrInputDocument fullDoc = new SolrInputDocument();
@@ -69,8 +73,7 @@ public class SolrRepository implements ISolrRepository {
         }
     }
 
-
-       public void deleteDocument(String id) throws SolrServerException, IOException {
+        public void deleteDocument(String id) throws SolrServerException, IOException {
         solrClient.deleteById(CORE_NAME, id);
         solrClient.commit(CORE_NAME);
     }
@@ -86,11 +89,16 @@ public class SolrRepository implements ISolrRepository {
         solrQuery.set("fl", "id,name,title,author,content,filetype,size,upload_date,created_date,description,score");
         
         solrQuery.setFacet(true);
-        for (String field : facetFields) {
+        
+        // Use provided facet fields or defaults
+        String[] fieldsToFacet = facetFields.length > 0 ? facetFields : DEFAULT_FACET_FIELDS;
+        for (String field : fieldsToFacet) {
             solrQuery.addFacetField(field);
         }
-        solrQuery.setFacetLimit(20);
-        solrQuery.setFacetMinCount(1);
+        
+        solrQuery.setFacetLimit(FACET_LIMIT);
+        solrQuery.setFacetMinCount(FACET_MIN_COUNT);
+        solrQuery.add("facet.sort", "count");
 
         QueryResponse response = solrClient.query(CORE_NAME, solrQuery);
         SolrDocumentList results = response.getResults();
@@ -113,15 +121,16 @@ public class SolrRepository implements ISolrRepository {
             documents.add(fileDoc);
         }
 
-        // Extract facet information
+        // Extract and format facet information
         Map<String, List<FacetValue>> facets = new HashMap<>();
         if (response.getFacetFields() != null) {
             for (FacetField facetField : response.getFacetFields()) {
                 List<FacetValue> facetValues = facetField.getValues().stream()
                         .map(count -> FacetValue.builder()
-                                .value(count.getName())
+                                .value(formatFacetValue(facetField.getName(), count.getName()))
                                 .count(count.getCount())
                                 .build())
+                        .sorted(Comparator.comparingLong(FacetValue::getCount).reversed())
                         .collect(Collectors.toList());
                 facets.put(facetField.getName(), facetValues);
             }
@@ -153,13 +162,16 @@ public class SolrRepository implements ISolrRepository {
         solrQuery.set("qf", "name title content description author");
         solrQuery.set("fl", "id,name,title,author,content,filetype,size,upload_date,created_date,description,score");
         
-        // Add faceting
         solrQuery.setFacet(true);
-        for (String field : facetFields) {
+        
+        String[] fieldsToFacet = facetFields.length > 0 ? facetFields : DEFAULT_FACET_FIELDS;
+        for (String field : fieldsToFacet) {
             solrQuery.addFacetField(field);
         }
-        solrQuery.setFacetLimit(20);
-        solrQuery.setFacetMinCount(1);
+        
+        solrQuery.setFacetLimit(FACET_LIMIT);
+        solrQuery.setFacetMinCount(FACET_MIN_COUNT);
+        solrQuery.add("facet.sort", "count");
 
         QueryResponse response = solrClient.query(CORE_NAME, solrQuery);
         SolrDocumentList results = response.getResults();
@@ -187,9 +199,10 @@ public class SolrRepository implements ISolrRepository {
             for (FacetField facetField : response.getFacetFields()) {
                 List<FacetValue> facetValues = facetField.getValues().stream()
                         .map(count -> FacetValue.builder()
-                                .value(count.getName())
+                                .value(formatFacetValue(facetField.getName(), count.getName()))
                                 .count(count.getCount())
                                 .build())
+                        .sorted(Comparator.comparingLong(FacetValue::getCount).reversed())
                         .collect(Collectors.toList());
                 facets.put(facetField.getName(), facetValues);
             }
@@ -203,12 +216,56 @@ public class SolrRepository implements ISolrRepository {
                 .build();
     }
 
+
+
     public String generateId() {
         return UUID.randomUUID().toString();
     }
 
+    private String formatFacetValue(String fieldName, String value) {
+        if (value == null || value.isEmpty()) {
+            return "Unknown";
+        }
 
-    private String getStringField(SolrDocument doc, String fieldName) {
+        if ("filetype".equalsIgnoreCase(fieldName)) {
+            return formatFileType(value);
+        }
+
+        if ("upload_date".equalsIgnoreCase(fieldName) || "created_date".equalsIgnoreCase(fieldName)) {
+            return formatDateForFacet(value);
+        }
+
+        return value;
+    }
+
+    private String formatFileType(String fileType) {
+        if (fileType == null || fileType.isEmpty()) {
+            return "Unknown";
+        }
+        
+        String cleaned = fileType.toLowerCase().replaceAll("^\\.", "");
+        if (cleaned.isEmpty()) {
+            return "Unknown";
+        }
+        
+        return cleaned.equals("unknown") || cleaned.equals("") ? "Other" : cleaned.toUpperCase();
+    }
+    private String formatDateForFacet(String dateString) {
+        if (dateString == null || dateString.isEmpty()) {
+            return "Unknown";
+        }
+        
+        try {
+            if (dateString.length() >= 10) {
+                return dateString.substring(0, 10);
+            }
+            return dateString;
+        } catch (Exception e) {
+            return dateString;
+        }
+    }
+
+    private String getStringField(SolrDocument doc,String fieldName) {
         Object value = doc.getFieldValue(fieldName);
         if (value == null) {
             return null;
@@ -220,7 +277,7 @@ public class SolrRepository implements ISolrRepository {
         return String.valueOf(value);
     }
 
-    private Long getLongField(SolrDocument doc, String fieldName) {
+    private Long getLongField(SolrDocument doc,String fieldName) {
         Object value = doc.getFieldValue(fieldName);
         if (value == null) {
             return 0L;
@@ -242,7 +299,7 @@ public class SolrRepository implements ISolrRepository {
         return 0L;
     }
 
-    private Float getFloatField(SolrDocument doc, String fieldName) {
+    private Float getFloatField(SolrDocument doc,String fieldName) {
         Object value = doc.getFieldValue(fieldName);
         if (value == null) {
             return null;
@@ -264,7 +321,7 @@ public class SolrRepository implements ISolrRepository {
         return null;
     }
 
-    private java.util.Date getDateField(SolrDocument doc, String fieldName) {
+    private java.util.Date getDateField(SolrDocument doc,String fieldName) {
         Object value = doc.getFieldValue(fieldName);
         if (value == null) {
             return null;

@@ -14,7 +14,6 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DocumentMetadata {
-    
     private String title;
     private String author;
     private String subject;
@@ -24,7 +23,6 @@ public class DocumentMetadata {
     private String creator;
     private String producer;
     private String content;
-    
     @Builder.Default
     private Map<String, String> customMetadata = new HashMap<>();
 }

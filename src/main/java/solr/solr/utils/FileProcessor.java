@@ -63,11 +63,10 @@ public class FileProcessor implements IFileProcessor {
             Parser parser = new AutoDetectParser();
             ParseContext context = new ParseContext();
             
-            // Parse metadata
+            
             java.io.ByteArrayInputStream metadataStream = new java.io.ByteArrayInputStream(fileBytes);
             parser.parse(metadataStream, new DefaultHandler(), tikaMetadata, context);
             
-            // Extract standard metadata using string keys
             metadata.setTitle(tikaMetadata.get("title"));
             metadata.setAuthor(tikaMetadata.get("Author"));
             metadata.setSubject(tikaMetadata.get("subject"));

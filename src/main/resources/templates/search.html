@@ -94,7 +94,6 @@
         </div>
 
         <div th:classappend="${facets != null and facets.size() > 0 ? 'lg:col-span-3' : 'lg:col-span-4'}" class="lg:col-span-4">
-            <!-- Streaming Results Container -->
             <div id="results-container" th:if="${streaming}" class="space-y-4">
                 <div class="flex items-center justify-between mb-6">
                     <p class="text-xs font-mono text-ink-700/50">
@@ -107,7 +106,6 @@
                     </p>
                 </div>
 
-                <!-- Summary Container (Streaming) -->
                 <div id="summary-display" class="bg-gradient-to-r from-brand-50 to-accent-50 border border-brand-200 rounded-lg p-5 mb-6">
                     <div class="flex items-start gap-3">
                         <svg class="w-5 h-5 text-brand-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -125,12 +123,9 @@
                     </div>
                 </div>
 
-                <!-- Results List (Streaming) -->
                 <div id="results-list" class="space-y-4">
-                    <!-- Results will be inserted here by JavaScript -->
                 </div>
 
-                <!-- Empty State -->
                 <div id="empty-state" class="hidden py-24 text-center">
                     <div class="w-16 h-16 rounded-2xl bg-ink-200 flex items-center justify-center mx-auto mb-5">
                         <svg class="w-7 h-7 text-ink-700/40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -145,7 +140,6 @@
                 </div>
             </div>
 
-            <!-- Server-side Rendered Results (fallback) -->
             <div th:if="${!streaming and results != null and results.size() > 0}">
                 <div class="flex items-center justify-between mb-6">
                     <p class="text-xs font-mono text-ink-700/50">
@@ -268,6 +262,20 @@
         0%, 50% { opacity: 1; }
         51%, 100% { opacity: 0; }
     }
+        @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-fadeIn {
+        animation: fadeIn 0.3s ease-in-out;
+    }
 </style>
 
 <script>
@@ -278,7 +286,6 @@
         
         if (!query || !streaming) return;
         
-        // Get streaming containers
         const summaryContent = document.getElementById('summary-content');
         const resultsList = document.getElementById('results-list');
         const resultCount = document.getElementById('result-count');
@@ -377,7 +384,6 @@
         eventSource.addEventListener('start', (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('Search started:', data);
                 updateStatus('Recherche en cours...');
             } catch (e) {
                 console.error('Error parsing start event:', e);
@@ -387,7 +393,6 @@
         eventSource.addEventListener('result', (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('Result received:', data);
                 addResultToList(data);
                 updateStatus('Traitement des résultats...');
             } catch (e) {
@@ -395,11 +400,9 @@
             }
         });
         
-        // Handle progress updates
         eventSource.addEventListener('progress', (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('Progress:', data);
                 updateStatus(data.message);
             } catch (e) {
                 console.error('Error parsing progress event:', e);
@@ -518,21 +521,5 @@
     }
 </script>
 
-<style>
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .animate-fadeIn {
-        animation: fadeIn 0.3s ease-in-out;
-    }
-</style>
 </body>
 </html>
