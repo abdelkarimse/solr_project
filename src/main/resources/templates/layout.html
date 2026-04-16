@@ -34,6 +34,13 @@
                 <span>Accueil</span>
             </a>
 
+            <a href="/documents" class="sidebar-link" data-page="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span>Documents</span>
+            </a>
+
             <a href="/search" class="sidebar-link" data-page="search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -92,7 +99,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const path = window.location.pathname;
             const links = document.querySelectorAll('.sidebar-link');
-            const titles = { '/': 'Accueil', '/search': 'Recherche', '/upload': 'Importer' };
+            const titles = { '/': 'Accueil', '/search': 'Recherche', '/documents': 'Documents', '/upload': 'Importer' };
 
             links.forEach(link => {
                 link.classList.remove('active');

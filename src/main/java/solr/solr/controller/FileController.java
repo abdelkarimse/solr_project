@@ -66,7 +66,7 @@ public class FileController {
 
     @GetMapping(value = "/search-summary-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter searchSummaryStream(
-            @RequestParam(value = "q", required = true) String query,
+            @RequestParam(value = "q", required = false, defaultValue = "") String query,
             @RequestParam(value = "title", required = false, defaultValue = "") String title,
             @RequestParam(value = "author", required = false, defaultValue = "") String author,
             @RequestParam(value = "filetype", required = false, defaultValue = "") String filetype,
@@ -76,8 +76,19 @@ public class FileController {
 
         new Thread(() -> {
             try {
-                final String searchQuery = query.trim();
+                final String searchQuery = query == null || query.trim().isEmpty() ? "*:*" : query.trim();
                 int finalLimit = limitParam <= 0 ? 20 : (limitParam > 100 ? 100 : limitParam);
+
+                Map<String, String> fieldFilters = new HashMap<>();
+                if (title != null && !title.isBlank()) {
+                    fieldFilters.put("title", title.trim());
+                }
+                if (author != null && !author.isBlank()) {
+                    fieldFilters.put("author", author.trim());
+                }
+                if (filetype != null && !filetype.isBlank()) {
+                    fieldFilters.put("filetype", filetype.trim());
+                }
 
                 emitter.send(SseEmitter.event()
                     .name("start")
@@ -87,7 +98,9 @@ public class FileController {
                     ))
                     .build());
 
-                FacetedSearchResult result = fileService.searchWithFacets(searchQuery, finalLimit, "filetype");
+                FacetedSearchResult result = fieldFilters.isEmpty()
+                        ? fileService.searchWithFacets(searchQuery, finalLimit, "filetype")
+                        : fileService.advancedSearch(searchQuery, fieldFilters, finalLimit, "filetype");
                 List<FileDocument> documents = result.getDocuments();
 
                 if (documents.isEmpty()) {

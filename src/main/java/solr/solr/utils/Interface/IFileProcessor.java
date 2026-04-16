@@ -4,13 +4,10 @@ import org.springframework.web.multipart.MultipartFile;
 import solr.solr.data.DocumentMetadata;
 
 
+
+import java.io.IOException;
+
 public interface IFileProcessor {
-
-    String extractContent(MultipartFile file);
-
-    String detectMimeType(MultipartFile file);
-
-    String getFileExtension(String filename);
-
-    DocumentMetadata extractMetadata(MultipartFile file);
+    String detectMimeType(MultipartFile file) throws IOException;
+    DocumentMetadata extractMetadata(MultipartFile file) throws IOException;
 }

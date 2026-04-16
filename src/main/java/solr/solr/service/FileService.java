@@ -21,18 +21,21 @@ public class FileService implements IFileService {
 
     private ISolrRepository solrRepository;
     private IFileProcessor fileProcessor;
-    private FileStorageService fileStorageService;
-    
+    @Override
     public FileDocument indexFile(MultipartFile file) throws IOException, SolrServerException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("File is empty");
         }
 
         String id = solrRepository.generateId();
-        
-        String storagePath = fileStorageService.saveFile(file);
-        
+
         DocumentMetadata metadata = fileProcessor.extractMetadata(file);
+
+        System.out.println("Extracted metadata for file: " + file.getOriginalFilename());
+        System.out.println("Title: " + metadata.getTitle());
+        System.out.println("Author: " + metadata.getAuthor());
+        System.out.println("Created Date: " + metadata.getCreatedDate());
+        System.out.println("Content: " + metadata.getContent());
         String content = metadata.getContent() != null ? metadata.getContent() : "";
         
         String fileType = fileProcessor.detectMimeType(file);
@@ -51,6 +54,7 @@ public class FileService implements IFileService {
                 .createdDate(metadata.getCreatedDate())
                 .description("Indexed file: " + file.getOriginalFilename())
                 .build();
+
         solrRepository.indexDocument(fileDocument);
 
         return fileDocument;
@@ -80,5 +84,11 @@ public class FileService implements IFileService {
         }
 
         solrRepository.deleteDocument(id);
+    }
+    @Override
+    public FacetedSearchResult listFiles(int limit, String... facetFields) throws SolrServerException, IOException {
+        FacetedSearchResult result = solrRepository.listDocuments(limit, facetFields);  
+        System.out.println(result);  
+        return result;
     }
 }

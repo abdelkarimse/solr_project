@@ -20,5 +20,10 @@ public interface ISolrRepository {
     FacetedSearchResult advancedSearch(String query, Map<String, String> fieldFilters, int limit, String... facetFields) 
             throws SolrServerException, IOException;
 
+
+    FacetedSearchResult listDocuments(int limit, String... facetFields) throws SolrServerException, IOException;
     String generateId();
+
+    long getFileCount() throws SolrServerException, IOException;
+    long getTotalSize() throws SolrServerException, IOException;
 }

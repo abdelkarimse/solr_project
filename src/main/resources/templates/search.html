@@ -15,6 +15,10 @@
 
         <div class="max-w-4xl space-y-4">
             <form method="get" action="/search" class="space-y-4">
+                <input type="hidden" name="title" th:value="${title}" />
+                <input type="hidden" name="author" th:value="${author}" />
+                <input type="hidden" name="filetype" th:value="${filetype}" />
+                <input type="hidden" name="limit" th:value="${limit != null ? limit : 20}" />
                 <div class="relative">
                     <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                         <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -39,23 +43,24 @@
             <details class="bg-ink-50 rounded-lg p-4">
                 <summary class="cursor-pointer font-semibold text-sm text-ink-900">Options de recherche avancée</summary>
                 <form method="get" action="/search" class="mt-4 space-y-3">
+                    <input type="hidden" name="limit" th:value="${limit != null ? limit : 20}" />
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                             <label class="block text-xs font-medium text-ink-700 mb-1">Titre</label>
-                            <input type="text" name="title" placeholder="Chercher par titre" class="input-field" />
+                            <input type="text" name="title" th:value="${title}" placeholder="Chercher par titre" class="input-field" />
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-ink-700 mb-1">Auteur</label>
-                            <input type="text" name="author" placeholder="Chercher par auteur" class="input-field" />
+                            <input type="text" name="author" th:value="${author}" placeholder="Chercher par auteur" class="input-field" />
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-ink-700 mb-1">Type de fichier</label>
                             <select name="filetype" class="input-field">
-                                <option value="">Tous les types</option>
-                                <option value="application/pdf">PDF</option>
-                                <option value="application/msword">Word</option>
-                                <option value="application/vnd.ms-excel">Excel</option>
-                                <option value="text/plain">Texte</option>
+                                <option value="" th:selected="${filetype == null or #strings.isEmpty(filetype)}">Tous les types</option>
+                                <option value="application/pdf" th:selected="${filetype == 'application/pdf'}">PDF</option>
+                                <option value="application/msword" th:selected="${filetype == 'application/msword'}">Word</option>
+                                <option value="application/vnd.ms-excel" th:selected="${filetype == 'application/vnd.ms-excel'}">Excel</option>
+                                <option value="text/plain" th:selected="${filetype == 'text/plain'}">Texte</option>
                             </select>
                         </div>
                     </div>
@@ -281,10 +286,15 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const params = new URLSearchParams(window.location.search);
-        const query = params.get('q');
+        const query = (params.get('q') || '').trim();
+        const title = (params.get('title') || '').trim();
+        const author = (params.get('author') || '').trim();
+        const filetype = (params.get('filetype') || '').trim();
         const streaming = document.querySelector('body').dataset.streaming === 'true';
-        
-        if (!query || !streaming) return;
+
+        const hasCriteria = query || title || author || filetype;
+
+        if (!hasCriteria || !streaming) return;
         
         const summaryContent = document.getElementById('summary-content');
         const resultsList = document.getElementById('results-list');
@@ -293,10 +303,10 @@
         const emptyState = document.getElementById('empty-state');
         
         const params_query = {
-            q: query,
-            title: params.get('title') || '',
-            author: params.get('author') || '',
-            filetype: params.get('filetype') || '',
+            q: query || '*:*',
+            title,
+            author,
+            filetype,
             limit: params.get('limit') || '20'
         };
         

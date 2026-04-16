@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${pageTitle})}">
+    <title>Documents · Solr Search</title>
+</head>
+<body>
+<aside th:replace="~{layout :: sidebar}"></aside>
+<nav   th:replace="~{layout :: navbar}"></nav>
+
+<main class="ml-60 mt-14 flex-1">
+    <div class="container-main py-8">
+
+        <!-- ── Header ─────────────────────────────────────────────────────── -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div>
+                <p class="text-xs font-mono text-brand-500 tracking-widest uppercase mb-2">Bibliothèque</p>
+                <h1 class="font-display text-3xl text-ink-900">Tous les documents</h1>
+            </div>
+            <div class="text-sm text-ink-700/70">
+                <span class="font-semibold text-brand-600" th:text="${totalCount}">0</span>
+                <span th:text="${totalCount == 1 ? ' document' : ' documents'}">documents</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            <!-- ── Facet sidebar ──────────────────────────────────────────── -->
+            <aside class="lg:col-span-1 space-y-4"
+                   th:if="${facets != null and !facets.isEmpty()}">
+                <div class="card p-4 sticky top-20">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold text-sm text-ink-900">Filtres par facette</h2>
+                        <a th:href="@{/documents(page=1,size=${pageSize})}"
+                           class="text-xs text-brand-600 hover:text-brand-700">Réinitialiser</a>
+                    </div>
+
+                    <form th:action="@{/documents}" method="get" class="space-y-4" id="facetForm">
+                        <input type="hidden" name="page"  value="1">
+                        <input type="hidden" name="size"  th:value="${pageSize}">
+
+                        <!-- titles -->
+                        <div th:if="${facets['titles'] != null and !facets['titles'].isEmpty()}" class="mb-4">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-700/70 mb-3">Titre</h3>
+                            <div class="space-y-2">
+                                <label th:each="fv : ${facets['titles']}"
+                                       class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox"
+                                           name="titles"
+                                           th:value="${fv.value}"
+                                           th:checked="${titlesArray != null and #arrays.contains(titlesArray, fv.value)}"
+                                           class="w-4 h-4 rounded border-ink-300 text-brand-600 cursor-pointer">
+                                    <span class="text-sm text-ink-800 group-hover:text-brand-600 flex-1"
+                                          th:text="${fv.value}">value</span>
+                                    <span class="text-xs text-ink-700/60" th:text="${fv.count}">0</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- authors -->
+                        <div th:if="${facets['authors'] != null and !facets['authors'].isEmpty()}" class="mb-4">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-700/70 mb-3">Auteur</h3>
+                            <div class="space-y-2">
+                                <label th:each="fv : ${facets['authors']}"
+                                       class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox"
+                                           name="authors"
+                                           th:value="${fv.value}"
+                                           th:checked="${authorsArray != null and #arrays.contains(authorsArray, fv.value)}"
+                                           class="w-4 h-4 rounded border-ink-300 text-brand-600 cursor-pointer">
+                                    <span class="text-sm text-ink-800 group-hover:text-brand-600 flex-1"
+                                          th:text="${fv.value}">value</span>
+                                    <span class="text-xs text-ink-700/60" th:text="${fv.count}">0</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- file_types -->
+                        <div th:if="${facets['file_types'] != null and !facets['file_types'].isEmpty()}" class="mb-4">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-700/70 mb-3">Type</h3>
+                            <div class="space-y-2">
+                                <label th:each="fv : ${facets['file_types']}"
+                                       class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox"
+                                           name="file_types"
+                                           th:value="${fv.value}"
+                                           th:checked="${fileTypesArray != null and #arrays.contains(fileTypesArray, fv.value)}"
+                                           class="w-4 h-4 rounded border-ink-300 text-brand-600 cursor-pointer">
+                                    <span class="text-sm text-ink-800 group-hover:text-brand-600 flex-1"
+                                          th:text="${fv.value}">value</span>
+                                    <span class="text-xs text-ink-700/60" th:text="${fv.count}">0</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- created_dates -->
+                        <div th:if="${facets['created_dates'] != null and !facets['created_dates'].isEmpty()}" class="mb-4">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-700/70 mb-3">Date</h3>
+                            <div class="space-y-2">
+                                <label th:each="fv : ${facets['created_dates']}"
+                                       class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox"
+                                           name="created_dates"
+                                           th:value="${fv.value}"
+                                           th:checked="${createdDatesArray != null and #arrays.contains(createdDatesArray, fv.value)}"
+                                           class="w-4 h-4 rounded border-ink-300 text-brand-600 cursor-pointer">
+                                    <span class="text-sm text-ink-800 group-hover:text-brand-600 flex-1"
+                                          th:text="${fv.value}">value</span>
+                                    <span class="text-xs text-ink-700/60" th:text="${fv.count}">0</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                                class="w-full px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition">
+                            Appliquer les filtres
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            <!-- ── Document list ──────────────────────────────────────────── -->
+            <section th:class="${facets != null and !facets.isEmpty() ? 'lg:col-span-3' : 'lg:col-span-4'} + ' space-y-4'">
+
+                <!-- Results -->
+                <div th:if="${results != null and !results.isEmpty()}" class="space-y-4">
+                    <article th:each="result : ${results}"
+                             class="card hover:border-brand-200 transition-all">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1">
+                                <h3 class="card-link font-semibold"
+                                    th:text="${result.title != null and !#strings.isEmpty(result.title) ? result.title : result.name}">
+                                    Titre
+                                </h3>
+                                <p class="text-xs text-ink-700/60 mt-1"
+                                   th:if="${result.author != null and !#strings.isEmpty(result.author)}">
+                                    Par <span th:text="${result.author}">Auteur</span>
+                                </p>
+                            </div>
+                            <div class="text-xs text-ink-700/60 shrink-0"
+                                 th:if="${result.uploadDate != null}">
+                                <span th:text="${#dates.format(result.uploadDate, 'dd MMM yyyy')}">date</span>
+                            </div>
+                        </div>
+
+                        <p class="card-text line-clamp-2 mt-3 text-sm"
+                           th:text="${result.content}">Aperçu</p>
+
+                        <div class="mt-4 flex items-center gap-2 flex-wrap">
+                            <span class="tag tag-brand"
+                                  th:if="${result.fileType != null and !#strings.isEmpty(result.fileType)}"
+                                  th:text="${result.fileType}">Type</span>
+                            <span class="tag tag-neutral"
+                                  th:if="${result.size != null}"
+                                  th:text="${#numbers.formatInteger(result.size / 1024, 0)} + ' KB'">0 KB</span>
+                        </div>
+
+                        <div class="card-meta border-t pt-2 mt-3">
+                            <span class="text-xs" th:text="${result.name}">fichier</span>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- Empty state -->
+                <div th:if="${results == null or results.isEmpty()}" class="py-20 text-center">
+                    <h2 class="font-display text-xl text-ink-900 mb-2">Aucun document trouvé</h2>
+                    <p class="text-sm text-ink-700/60">Essayez un autre filtre ou importez des documents.</p>
+                </div>
+
+                <!-- Pagination — carries all active filter arrays -->
+                <nav class="flex items-center justify-center gap-2 pt-4"
+                     th:if="${totalPages > 1}">
+
+                    <a th:if="${currentPage > 1}"
+                       th:href="@{/documents(page=${currentPage - 1},size=${pageSize},titles=${titlesArray},authors=${authorsArray},file_types=${fileTypesArray},created_dates=${createdDatesArray})}"
+                       class="px-3 py-2 rounded-lg border border-ink-200 text-sm text-ink-800 hover:border-brand-300 hover:text-brand-600">
+                        ← Précédent
+                    </a>
+
+                    <a th:each="p : ${pageNumbers}"
+                       th:href="@{/documents(page=${p},size=${pageSize},titles=${titlesArray},authors=${authorsArray},file_types=${fileTypesArray},created_dates=${createdDatesArray})}"
+                       th:classappend="${p == currentPage ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-ink-800 border-ink-200 hover:border-brand-300 hover:text-brand-600'}"
+                       class="px-3 py-2 rounded-lg border text-sm"
+                       th:text="${p}">1</a>
+
+                    <a th:if="${currentPage < totalPages}"
+                       th:href="@{/documents(page=${currentPage + 1},size=${pageSize},titles=${titlesArray},authors=${authorsArray},file_types=${fileTypesArray},created_dates=${createdDatesArray})}"
+                       class="px-3 py-2 rounded-lg border border-ink-200 text-sm text-ink-800 hover:border-brand-300 hover:text-brand-600">
+                        Suivant →
+                    </a>
+                </nav>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -13,7 +13,6 @@ import java.util.Map;
 public class StatisticsService {
 
     private ISolrRepository solrRepository;
-    private FileStorageService fileStorageService;
 
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -22,10 +21,10 @@ public class StatisticsService {
             long totalDocuments = getTotalIndexedDocuments();
             stats.put("totalDocuments", totalDocuments);
 
-            long fileCount = fileStorageService.getFileCount();
+            long fileCount = solrRepository.getFileCount();
             stats.put("totalFiles", fileCount);
 
-            long totalSize = fileStorageService.getTotalFileSize();
+            long totalSize = solrRepository.getTotalSize();
             stats.put("totalSize", formatFileSize(totalSize));
             stats.put("totalSizeBytes", totalSize);
 
@@ -39,10 +38,8 @@ public class StatisticsService {
 
     private long getTotalIndexedDocuments() throws IOException {
         try {
-      
-            solr.solr.data.FacetedSearchResult result = null;
-            
-            return fileStorageService.getFileCount();
+
+            return solrRepository.getFileCount();
         } catch (Exception e) {
             System.err.println("Error getting document count from Solr: " + e.getMessage());
             return 0;

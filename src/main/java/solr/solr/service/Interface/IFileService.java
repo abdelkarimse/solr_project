@@ -20,4 +20,6 @@ public interface IFileService {
             throws SolrServerException, IOException;
 
     void deleteFile(String id) throws SolrServerException, IOException;
+
+    FacetedSearchResult listFiles(int limit, String... facetFields) throws SolrServerException, IOException;
 }
